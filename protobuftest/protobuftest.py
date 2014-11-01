@@ -1,6 +1,7 @@
 import os
 import time
 import gzip
+import lz4
 import random
 import json
 import csv
@@ -41,11 +42,17 @@ t3 = time.time()
 out = csv.DictWriter(gzip.open('output.csvz', 'wb'), csvseq[0].keys())
 out.writerows(csvseq)
 t4 = time.time()
+open('output.pbz', 'wb').write(lz4.dumps(addressbook.SerializeToString()))
+t5 = time.time()
+gzip.open('output.pbgz', 'wb').write(addressbook.SerializeToString())
+t6 = time.time()
 
 json_write = t1 - t0
 proto_write = t2 - t1
 gzjson_write = t3 - t2
 gzcsv_write = t4 - t3
+prozlib_write = t5 - t4
+progzlib_write = t6 - t5
 
 # How long does it take to read protobufs?
 t0 = time.time()
@@ -57,19 +64,29 @@ json.loads(gzip.open('output.jsz', 'rb').read())
 t3 = time.time()
 list(csv.DictReader(gzip.open('output.jsz', 'rb')))
 t4 = time.time()
+addressbook_pb2.AddressBook().ParseFromString(lz4.loads(open('output.pbz', 'rb').read()))
+t5 = time.time()
+addressbook_pb2.AddressBook().ParseFromString(gzip.open('output.pbgz', 'rb').read())
+t6 = time.time()
 
 json_read = t1 - t0
 proto_read = t2 - t1
 gzjson_read = t3 - t2
 gzcsv_read = t4 - t3
+prozlib_read = t5 - t4
+progzlib_read = t6 - t5
 
 # Get the file sizes
 json_size   = float(os.stat('output.json').st_size)
 proto_size  = float(os.stat('output.pb'  ).st_size)
+prozlib_size  = float(os.stat('output.pbz'  ).st_size)
+progzlib_size  = float(os.stat('output.pbgz'  ).st_size)
 gzjson_size = float(os.stat('output.jsz' ).st_size)
 gzcsv_size  = float(os.stat('output.csvz').st_size)
 
 print 'json   \t%0.2f\t%0.2f\t%0.2f' % (json_write   / json_write, json_read   / json_read, json_size   / json_size)
 print 'proto  \t%0.2f\t%0.2f\t%0.2f' % (proto_write  / json_write, proto_read  / json_read, proto_size  / json_size)
+print 'pb.lz4  \t%0.2f\t%0.2f\t%0.2f' % (prozlib_write  / json_write, prozlib_read  / json_read, prozlib_size  / json_size)
+print 'pb.gz  \t%0.2f\t%0.2f\t%0.2f' % (progzlib_write  / json_write, progzlib_read  / json_read, progzlib_size  / json_size)
 print 'json.gz\t%0.2f\t%0.2f\t%0.2f' % (gzjson_write / json_write, gzjson_read / json_read, gzjson_size / json_size)
 print 'csv.gz \t%0.2f\t%0.2f\t%0.2f' % (gzcsv_write  / json_write, gzcsv_read  / json_read, gzcsv_size  / json_size)
